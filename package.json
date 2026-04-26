@@ -1,0 +1,20 @@
+{
+  "name": "swahit-monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "infra:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "infra:logs": "docker compose -f infra/docker/docker-compose.yml logs -f",
+    "db:migrate": "pnpm --filter backend prisma migrate dev",
+    "db:studio": "pnpm --filter backend prisma studio"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "pnpm@10.33.2"
+}

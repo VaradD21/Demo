@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Enums (SQLite uses String, but we document intent here) ────────────────
+// UserRole: USER | ADMIN | DOCTOR
+// AppointmentStatus: PENDING | CONFIRMED | CANCELLED | COMPLETED
+// Gender: MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
+// SubscriptionPlan: FREE | PREMIUM | PRO
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  name          String?
+  dob           DateTime?
+  phone         String?
+  gender        String?   // MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
+  profession    String?
+  role          String    @default("USER") // USER | ADMIN | DOCTOR
+  legalConsentAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  moods          MoodEntry[]
+  questionnaires QuestionnaireResult[]
+  appointments   Appointment[]
+  chatSessions   ChatSession[]
+  memoryProfile  UserMemoryProfile?
+  subscription   Subscription?
+
+  @@index([email])
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      String   @default("FREE") // FREE | PREMIUM | PRO
+  status    String   @default("ACTIVE") // ACTIVE | CANCELLED | EXPIRED
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model MoodEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mood      String   // HAPPY | CALM | SAD | ANXIOUS | ANGRY | TIRED
+  intensity Int      @default(5) // 1-10 scale
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model QuestionnaireResult {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score     Int
+  feedback  String
+  answers   String   // JSON stored as string for SQLite compatibility
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Doctor & Appointment System ────────────────────────────────────────────
+
+model Doctor {
+  id           String   @id @default(uuid())
+  name         String
+  specialty    String   // e.g. "Therapist", "Psychiatrist", "Counselor"
+  bio          String?
+  avatarUrl    String?
+  rating       Float    @default(4.5)
+  reviewCount  Int      @default(0)
+  yearsExp     Int      @default(5)
+  languages    String   @default("English") // comma-separated
+  isAvailable  Boolean  @default(true)
+  consultFee   Float    @default(0.0)
+  createdAt    DateTime @default(now())
+
+  appointments Appointment[]
+  slots        DoctorSlot[]
+
+  @@index([specialty, isAvailable])
+}
+
+model DoctorSlot {
+  id        String   @id @default(uuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  startTime DateTime
+  endTime   DateTime
+  isBooked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([doctorId, startTime])
+}
+
+model Appointment {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctorId      String?
+  doctor        Doctor?  @relation(fields: [doctorId], references: [id])
+  patientName   String
+  location      String   @default("Online")
+  preferredTime String
+  notes         String?
+  status        String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED | COMPLETED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([doctorId])
+}
+
+// ─── Chat & Memory System ────────────────────────────────────────────────────
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  messages  ChatMessage[]
+  summaries ChatSummary[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id         String      @id @default(uuid())
+  sessionId  String
+  session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role       String      // 'user' | 'ai'
+  content    String
+  emotionTag String?
+  createdAt  DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+model UserMemoryProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferredName       String?
+  recurringStressors  String?
+  goals               String?
+  positiveHabits      String?
+  emotionalPatterns   String?
+  recentSummaries     String?
+  distressCount       Int      @default(0) // Tracks repeated distress signals
+  lastDistressAt      DateTime?
+  updatedAt           DateTime @updatedAt
+}
+
+model ChatSummary {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  summary   String
+  createdAt DateTime    @default(now())
+
+  @@index([sessionId])
+}

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment (NEVER commit)
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+
+# SQLite database files
+*.db
+*.db-journal
+*.sqlite
+
+# Prisma generated
+/generated/prisma
+prisma/migrations/
+
+# Logs
+*.log
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
